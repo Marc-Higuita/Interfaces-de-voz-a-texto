@@ -1,7 +1,7 @@
 import streamlit as st
 import pytesseract
 from PIL import Image
-from deep_translator import GoogleTranslator
+from translate import Translator
 from gtts import gTTS
 import os
 
@@ -39,15 +39,6 @@ st.markdown("""
         font-size: 0.95rem;
         color: #94a3b8;
         margin-bottom: 2rem;
-    }
-    
-    /* Paneles y tarjetas */
-    .ui-card {
-        background-color: #181b24;
-        border: 1px solid #262b36;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 16px;
     }
     
     /* Personalización de botones */
@@ -88,7 +79,7 @@ IDIOMAS = {
     "Italiano": "it",
     "Portugués": "pt",
     "Japonés": "ja",
-    "Chino": "zh-CN"
+    "Chino": "zh"
 }
 
 # Configuración del menú lateral
@@ -170,7 +161,7 @@ if imagen_para_procesar is not None:
                 else:
                     st.warning("No se detectó texto legible en la imagen.")
             except Exception as e:
-                st.error("Error de inicialización OCR. Verifica la existencia del archivo packages.txt en el repositorio de GitHub.")
+                st.error("Error al ejecutar OCR. Verifica que el archivo packages.txt exista en GitHub.")
 
 # Bloque final de Traducción y Audio
 if texto_para_procesar != "":
@@ -184,10 +175,11 @@ if texto_para_procesar != "":
                 lang_audio = "es"
                 
                 if modo_audio == "Texto traducido" or opcion_menu == "Texto directo":
-                    traductor = GoogleTranslator(source='auto', target=codigo_idioma.lower())
-                    texto_traducido = traductor.translate(texto_para_procesar)
+                    # Uso de la librería de traducción con fallback seguro
+                    translator = Translator(to_lang=codigo_idioma)
+                    texto_traducido = translator.translate(texto_para_procesar)
                     texto_final_audio = texto_traducido
-                    lang_audio = codigo_idioma.lower()
+                    lang_audio = codigo_idioma
                     
                     st.markdown(f"**Traducción ({opcion_idioma}):**")
                     st.info(texto_final_audio)
@@ -195,6 +187,7 @@ if texto_para_procesar != "":
                     st.markdown("**Texto original:**")
                     st.info(texto_final_audio)
                 
+                # Generación de voz con gTTS
                 tts = gTTS(text=texto_final_audio, lang=lang_audio, slow=velocidad_lectura)
                 ruta_audio = "temp_studio_audio.mp3"
                 tts.save(ruta_audio)

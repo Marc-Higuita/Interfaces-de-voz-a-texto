@@ -1,7 +1,7 @@
 import streamlit as st
 import pytesseract
 from PIL import Image
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 from gtts import gTTS
 import os
 
@@ -35,9 +35,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. Inicialización de componentes
-translator = Translator()
-
 IDIOMAS = {
     "Español 🇪🇸": "es",
     "Inglés 🇺🇸": "en",
@@ -46,15 +43,14 @@ IDIOMAS = {
     "Italiano 🇮🇹": "it",
     "Portugués 🇵🇹": "pt",
     "Japonés 🇯🇵": "ja",
-    "Chino (Simplificado) 🇨🇳": "zh-cn"
+    "Chino (Simplificado) 🇨🇳": "zh-CN"
 }
 
-# 3. BARRA LATERAL (Sidebar): Navegación y Ajustes
+# 2. BARRA LATERAL (Sidebar): Navegación y Ajustes
 with st.sidebar:
     st.image("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600&auto=format&fit=crop", use_container_width=True)
     st.title("🧩 Menú Principal")
     
-    # Selector principal de modo de uso
     opcion_menu = st.radio(
         "Selecciona el modo de interacción:",
         [
@@ -67,7 +63,6 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("⚙️ Opciones de Audio y Traducción")
     
-    # Modo de salida de audio
     modo_audio = st.selectbox(
         "Modo de reproducción de audio:",
         ["Audio del Texto Traducido", "OCR-AUDIO (Texto Original en Foto)"]
@@ -85,9 +80,7 @@ st.markdown(f'<p class="sub-title">Modo activo: <b>{opcion_menu}</b></p>', unsaf
 texto_para_procesar = ""
 imagen_para_procesar = None
 
-# ---------------------------------------------------------
-# OPCIÓN 1: CÁMARA EN VIVO (OCR-AUDIO)
-# ---------------------------------------------------------
+# OPCIÓN 1: CÁMARA EN VIVO
 if opcion_menu == "📸 Cámara en Vivo (OCR-AUDIO)":
     st.subheader("📸 Captura con Cámara (OCR-AUDIO)")
     st.write("Toma una foto a cualquier letrero, documento o libro para convertirlo a voz:")
@@ -95,9 +88,7 @@ if opcion_menu == "📸 Cámara en Vivo (OCR-AUDIO)":
     if foto_camara:
         imagen_para_procesar = Image.open(foto_camara)
 
-# ---------------------------------------------------------
-# OPCIÓN 2: CARGAR IMAGEN (OCR-AUDIO)
-# ---------------------------------------------------------
+# OPCIÓN 2: CARGAR IMAGEN
 elif opcion_menu == "📁 Cargar Imagen (OCR-AUDIO)":
     st.subheader("📁 Subir Archivo de Imagen (OCR-AUDIO)")
     st.write("Carga una imagen en formato JPG, PNG o JPEG que contenga texto:")
@@ -105,9 +96,7 @@ elif opcion_menu == "📁 Cargar Imagen (OCR-AUDIO)":
     if archivo_subido:
         imagen_para_procesar = Image.open(archivo_subido)
 
-# ---------------------------------------------------------
 # OPCIÓN 3: TEXTO DIRECTO
-# ---------------------------------------------------------
 elif opcion_menu == "✍️ Texto Directo":
     st.subheader("✍️ Entrada de Texto a Voz")
     texto_ingresado = st.text_area(
@@ -118,9 +107,7 @@ elif opcion_menu == "✍️ Texto Directo":
     if texto_ingresado.strip() != "":
         texto_para_procesar = texto_ingresado
 
-# ---------------------------------------------------------
-# PROCESAMIENTO DE IMÁGENES (OCR) PARA OPCIONES 1 Y 2
-# ---------------------------------------------------------
+# PROCESAMIENTO OCR
 if imagen_para_procesar is not None:
     col1, col2 = st.columns([1, 1], gap="medium")
     with col1:
@@ -141,24 +128,24 @@ if imagen_para_procesar is not None:
             except Exception as e:
                 st.error(f"Error al ejecutar OCR: {e}")
 
-# ---------------------------------------------------------
-# BLOQUE MULTIMODAL DE TRADUCCIÓN Y PROCESAMIENTO OCR-AUDIO
-# ---------------------------------------------------------
+# BLOQUE MULTIMODAL DE TRADUCCIÓN Y AUDIO
 if texto_para_procesar != "":
     st.markdown("---")
     st.subheader("🔊 Generador OCR-AUDIO y Traducción")
     
     if st.button("🚀 Procesar y Generar OCR-AUDIO", use_container_width=True, type="primary"):
-        with st.spinner("Sintetizando señal de audio con gTTS..."):
+        with st.spinner("Sintetizando señal de audio..."):
             try:
                 texto_final_audio = texto_para_procesar
                 lang_audio = "es"
                 
-                # Si el usuario quiere traducción
                 if modo_audio == "Audio del Texto Traducido" or opcion_menu == "✍️ Texto Directo":
-                    traduccion = translator.translate(texto_para_procesar, dest=codigo_idioma)
-                    texto_final_audio = traduccion.text
-                    lang_audio = codigo_idioma
+                    # Traducción con deep-translator
+                    traductor = GoogleTranslator(source='auto', target=codigo_idioma.lower())
+                    texto_traducido = traductor.translate(texto_para_procesar)
+                    texto_final_audio = texto_traducido
+                    lang_audio = codigo_idioma.lower()
+                    
                     st.markdown(f"**Texto Traducido ({opcion_idioma}):**")
                     st.info(texto_final_audio)
                 else:

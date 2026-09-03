@@ -5,162 +5,204 @@ from deep_translator import GoogleTranslator
 from gtts import gTTS
 import os
 
-# 1. Configuración de la página
+# Configuración de página
 st.set_page_config(
-    page_title="LensVoice: OCR-AUDIO Multimodal",
-    page_icon="🎙️",
+    page_title="LensVoice Studio",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Estilos CSS personalizados
+# Estilo UI/UX basado en tarjetas oscuras, píldoras y tipografía limpia
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
+    
     .stApp {
-        background-color: #0e1117;
+        background-color: #0f1117;
+        color: #e2e8f0;
     }
-    .gradient-header {
-        background: linear-gradient(90deg, #ff4b4b 0%, #ff8c42 50%, #4b9cd3 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 2.6rem !important;
-        font-weight: 800 !important;
-        margin-bottom: 5px;
+    
+    /* Header estilizado */
+    .brand-header {
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+        margin-bottom: 0.2rem;
     }
-    .sub-title {
-        color: #a0aec0;
-        font-size: 1.05rem;
-        margin-bottom: 20px;
+    
+    .brand-sub {
+        font-size: 0.95rem;
+        color: #94a3b8;
+        margin-bottom: 2rem;
+    }
+    
+    /* Paneles y tarjetas */
+    .ui-card {
+        background-color: #181b24;
+        border: 1px solid #262b36;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+    }
+    
+    /* Personalización de botones */
+    .stButton>button {
+        background-color: #2563eb;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        padding: 0.6rem 1.2rem;
+        transition: all 0.2s ease;
+    }
+    
+    .stButton>button:hover {
+        background-color: #1d4ed8;
+        border: none;
+    }
+
+    /* Píldoras e información */
+    .tag-pill {
+        display: inline-block;
+        background-color: #262b36;
+        color: #93c5fd;
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-right: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
 
 IDIOMAS = {
-    "Español 🇪🇸": "es",
-    "Inglés 🇺🇸": "en",
-    "Francés 🇫🇷": "fr",
-    "Alemán 🇩🇪": "de",
-    "Italiano 🇮🇹": "it",
-    "Portugués 🇵🇹": "pt",
-    "Japonés 🇯🇵": "ja",
-    "Chino (Simplificado) 🇨🇳": "zh-CN"
+    "Español": "es",
+    "Inglés": "en",
+    "Francés": "fr",
+    "Alemán": "de",
+    "Italiano": "it",
+    "Portugués": "pt",
+    "Japonés": "ja",
+    "Chino": "zh-CN"
 }
 
-# 2. BARRA LATERAL (Sidebar): Navegación y Ajustes
+# Configuración del menú lateral
 with st.sidebar:
-    st.image("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600&auto=format&fit=crop", use_container_width=True)
-    st.title("🧩 Menú Principal")
+    st.markdown("### Navegación")
     
     opcion_menu = st.radio(
-        "Selecciona el modo de interacción:",
-        [
-            "📸 Cámara en Vivo (OCR-AUDIO)",
-            "📁 Cargar Imagen (OCR-AUDIO)",
-            "✍️ Texto Directo"
-        ]
+        "Modo de entrada:",
+        ["Cámara en vivo", "Archivo de imagen", "Texto directo"],
+        label_visibility="collapsed"
     )
     
     st.markdown("---")
-    st.subheader("⚙️ Opciones de Audio y Traducción")
+    st.markdown("### Configuración")
     
     modo_audio = st.selectbox(
-        "Modo de reproducción de audio:",
-        ["Audio del Texto Traducido", "OCR-AUDIO (Texto Original en Foto)"]
+        "Salida de audio:",
+        ["Texto traducido", "Texto original (OCR)"]
     )
     
-    opcion_idioma = st.selectbox("Idioma de Destino (para Traducción):", list(IDIOMAS.keys()), index=0)
+    opcion_idioma = st.selectbox(
+        "Idioma destino:",
+        list(IDIOMAS.keys()),
+        index=0
+    )
     codigo_idioma = IDIOMAS[opcion_idioma]
     
-    velocidad_lectura = st.checkbox("Lectura Lenta / Pausada", value=False)
+    velocidad_lectura = st.checkbox("Velocidad pausada", value=False)
 
-# Encabezado dinámico
-st.markdown('<h1 class="gradient-header">🎙️ LensVoice: Sistema OCR-AUDIO</h1>', unsafe_allow_html=True)
-st.markdown(f'<p class="sub-title">Modo activo: <b>{opcion_menu}</b></p>', unsafe_allow_html=True)
+# Encabezado principal
+st.markdown('<div class="brand-header">LensVoice Studio</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="brand-sub"><span class="tag-pill">Modo</span> {opcion_menu}</div>', unsafe_allow_html=True)
 
 texto_para_procesar = ""
 imagen_para_procesar = None
 
-# OPCIÓN 1: CÁMARA EN VIVO
-if opcion_menu == "📸 Cámara en Vivo (OCR-AUDIO)":
-    st.subheader("📸 Captura con Cámara (OCR-AUDIO)")
-    st.write("Toma una foto a cualquier letrero, documento o libro para convertirlo a voz:")
-    foto_camara = st.camera_input("Capturar foto desde tu cámara")
+# Opción 1: Cámara
+if opcion_menu == "Cámara en vivo":
+    st.markdown("#### Captura mediante cámara")
+    foto_camara = st.camera_input("Capturar documento", label_visibility="collapsed")
     if foto_camara:
         imagen_para_procesar = Image.open(foto_camara)
 
-# OPCIÓN 2: CARGAR IMAGEN
-elif opcion_menu == "📁 Cargar Imagen (OCR-AUDIO)":
-    st.subheader("📁 Subir Archivo de Imagen (OCR-AUDIO)")
-    st.write("Carga una imagen en formato JPG, PNG o JPEG que contenga texto:")
-    archivo_subido = st.file_uploader("Selecciona la imagen desde tu equipo", type=["png", "jpg", "jpeg"])
+# Opción 2: Carga de archivo
+elif opcion_menu == "Archivo de imagen":
+    st.markdown("#### Cargar archivo de imagen")
+    archivo_subido = st.file_uploader("Seleccionar imagen (PNG, JPG, JPEG)", type=["png", "jpg", "jpeg"])
     if archivo_subido:
         imagen_para_procesar = Image.open(archivo_subido)
 
-# OPCIÓN 3: TEXTO DIRECTO
-elif opcion_menu == "✍️ Texto Directo":
-    st.subheader("✍️ Entrada de Texto a Voz")
+# Opción 3: Entrada directa de texto
+elif opcion_menu == "Texto directo":
+    st.markdown("#### Entrada de texto")
     texto_ingresado = st.text_area(
-        "Escribe o pega el texto que deseas sintetizar en audio:",
-        placeholder="Ejemplo: Hola, bienvenidos a la aplicación multimodal de OCR y voz...",
-        height=180
+        "Escribe o pega el texto para procesar:",
+        placeholder="Ingresa aquí el texto...",
+        height=160,
+        label_visibility="collapsed"
     )
     if texto_ingresado.strip() != "":
         texto_para_procesar = texto_ingresado
 
-# PROCESAMIENTO OCR
+# Procesamiento OCR para imágenes
 if imagen_para_procesar is not None:
-    col1, col2 = st.columns([1, 1], gap="medium")
+    col1, col2 = st.columns([1, 1], gap="large")
+    
     with col1:
-        st.markdown("#### 🖼️ Vista Previa")
-        st.image(imagen_para_procesar, caption="Imagen seleccionada", use_container_width=True)
+        st.markdown("#### Vista previa")
+        st.image(imagen_para_procesar, use_container_width=True)
     
     with col2:
-        st.markdown("#### 🔍 Lectura de Texto (OCR)")
-        with st.spinner("Procesando caracteres con Tesseract OCR..."):
+        st.markdown("#### Extracción OCR")
+        with st.spinner("Procesando imagen..."):
             try:
                 texto_ocr = pytesseract.image_to_string(imagen_para_procesar)
                 if texto_ocr.strip() != "":
-                    st.success("¡Texto extraído con éxito por OCR!")
-                    st.text_area("Texto Detectado en Imagen:", texto_ocr, height=180)
+                    st.text_area("Texto detectado:", texto_ocr, height=180, label_visibility="collapsed")
                     texto_para_procesar = texto_ocr
                 else:
-                    st.warning("No se pudo detectar texto legible en la imagen.")
+                    st.warning("No se detectó texto legible en la imagen.")
             except Exception as e:
-                st.error(f"Error al ejecutar OCR: {e}")
+                st.error("Error de inicialización OCR. Verifica la existencia del archivo packages.txt en el repositorio de GitHub.")
 
-# BLOQUE MULTIMODAL DE TRADUCCIÓN Y AUDIO
+# Bloque final de Traducción y Audio
 if texto_para_procesar != "":
     st.markdown("---")
-    st.subheader("🔊 Generador OCR-AUDIO y Traducción")
+    st.markdown("#### Procesamiento de audio y traducción")
     
-    if st.button("🚀 Procesar y Generar OCR-AUDIO", use_container_width=True, type="primary"):
-        with st.spinner("Sintetizando señal de audio..."):
+    if st.button("Generar lectura de audio", use_container_width=True):
+        with st.spinner("Sintetizando audio..."):
             try:
                 texto_final_audio = texto_para_procesar
                 lang_audio = "es"
                 
-                if modo_audio == "Audio del Texto Traducido" or opcion_menu == "✍️ Texto Directo":
-                    # Traducción con deep-translator
+                if modo_audio == "Texto traducido" or opcion_menu == "Texto directo":
                     traductor = GoogleTranslator(source='auto', target=codigo_idioma.lower())
                     texto_traducido = traductor.translate(texto_para_procesar)
                     texto_final_audio = texto_traducido
                     lang_audio = codigo_idioma.lower()
                     
-                    st.markdown(f"**Texto Traducido ({opcion_idioma}):**")
+                    st.markdown(f"**Traducción ({opcion_idioma}):**")
                     st.info(texto_final_audio)
                 else:
-                    st.markdown("**Texto Original (OCR-AUDIO):**")
+                    st.markdown("**Texto original:**")
                     st.info(texto_final_audio)
                 
-                # Generación de archivo MP3
                 tts = gTTS(text=texto_final_audio, lang=lang_audio, slow=velocidad_lectura)
-                ruta_audio = "temp_ocr_audio.mp3"
+                ruta_audio = "temp_studio_audio.mp3"
                 tts.save(ruta_audio)
                 
-                st.markdown("#### 🎧 Reproductor de Audio (OCR-AUDIO):")
+                st.markdown("#### Reproductor")
                 with open(ruta_audio, "rb") as f_audio:
                     st.audio(f_audio.read(), format="audio/mp3")
                 
                 os.remove(ruta_audio)
             except Exception as e:
-                st.error(f"Ocurrió un error al procesar el módulo OCR-AUDIO: {e}")
+                st.error(f"Error al procesar la señal de audio: {e}")
